@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore HackerNews.slnx
+
+      - name: Build
+        run: dotnet build HackerNews.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: >
+          dotnet test --solution HackerNews.slnx --configuration Release --no-build
+          --coverage --coverage-output-format cobertura
+          --report-xunit-trx
+
+      - name: Upload test results and coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            **/TestResults/**/*.trx
+            **/TestResults/**/*.cobertura.xml
+          if-no-files-found: warn
